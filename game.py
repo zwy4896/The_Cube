@@ -41,7 +41,7 @@ class Game:
 
         self.systems = [
             InputSystem(),
-            MovementSystem(self.clock.tick(FPS)),
+            MovementSystem(),
             CollisionSystem(world.playfield_width, world.playfield_height),
             ClearLinesSystem(),
             RenderSystem(self.screen, self.play_field, self.score_board, BLOCK_SIZE),
@@ -61,8 +61,8 @@ class Game:
         self.spawn_block()
 
     def spawn_block(self):
-        shape = random.choice(self.shapes)
-        # shape = self.shapes[2]
+        # shape = random.choice(self.shapes)
+        shape = self.shapes[0]
 
         entity = self.entity_manager.create_entity()
         entity.add_component(PositionComponent(PLAYFIELD_WIDTH // 2 - len(shape[0]) // 2, 0))
@@ -78,9 +78,12 @@ class Game:
     def handle_events(self):
         events = pygame.event.get()
         for event in events:
-            if event.type == pygame.QUIT:
+            if event.type == pygame.QUIT or event.type == pygame.USEREVENT + 2:
                 self.running = False
             if event.type == pygame.USEREVENT + 1:
+                self.systems[5].process(self.entity_manager.entities)
+                self.systems[3].process(self.entity_manager.entities)
+
                 self.spawn_block()
             else:
                 continue
@@ -89,7 +92,6 @@ class Game:
 
     def update(self):
         self.systems[2].process(self.entity_manager.entities)
-        self.systems[5].process(self.entity_manager.entities)
         current_time = pygame.time.get_ticks()
         if current_time - self.fall_time >= FALL_SPEED:
             self.systems[1].process(self.entity_manager.entities)

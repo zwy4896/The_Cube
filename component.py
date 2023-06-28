@@ -37,3 +37,4 @@ class StateComponent:
 class MapComponent:
     def __init__(self, map_mat) -> None:
         self.map = map_mat
+        self.height = 0

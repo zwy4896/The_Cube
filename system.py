@@ -42,8 +42,6 @@ class InputSystem:
                             shape.height = len(shape.shape)
 # 移动系统
 class MovementSystem:
-    def __init__(self, dt) -> None:
-        self.dt = dt
     def process(self, entities):
         entity = entities[-1]
         if entity.has_components(PositionComponent, SpeedComponent):
@@ -73,7 +71,6 @@ class CollisionSystem:
                 position.y = self.playfield_height - shape.height
                 state.active = False
                 pygame.event.post(pygame.event.Event(pygame.USEREVENT+1))
-                # self.playfield_mat[position.y:position.y+shape.height, position.x:position.x+shape.width] |= np.asarray(shape.shape)
                 return
             # 检测方块是否碰到左边界
             if position.x <= 0:
@@ -82,17 +79,33 @@ class CollisionSystem:
                 # 限制右移
                 position.x = self.playfield_width - shape.width
             # 检测方块的底部与其他方块的顶部碰撞
-            if np.count_nonzero(map_mat.map[position.y + shape.height, position.x:position.x+shape.width].squeeze() & np.asarray(shape.shape[-1])):
-                # 停止方块的运动
-                state.active = False
-                pygame.event.post(pygame.event.Event(pygame.USEREVENT+1))
-                return
+            for idx, arr in enumerate(shape.shape[::-1]):
+                if np.count_nonzero(map_mat.map[position.y + shape.height-idx, position.x:position.x+shape.width].squeeze() & np.asarray(arr)):
+                    # 停止方块的运动
+                    state.active = False
+                    pygame.event.post(pygame.event.Event(pygame.USEREVENT+1))
+                    return
 
 # 消行和得分系统
 class ClearLinesSystem:
+    def __init__(self) -> None:
+        self.lines_cleared = 0
     def process(self, entities):
+        entity = entities[0]
         # 处理消行和更新得分逻辑
-        pass
+        if entity.has_components(MapComponent):
+            map_mat = entity.get_component(MapComponent)
+            for row in range(map_mat.height):
+                _row = map_mat.map.shape[0]-row-1
+                if np.all(map_mat.map[_row]):
+                    # 清除消行
+                    map_mat.map[:_row+1] = np.roll(map_mat.map[:_row+1], shift=1, axis=0)
+                    map_mat.map[0] = 0
+                    map_mat.height -= 1
+                    self.lines_cleared += 1
+                else:
+                    continue
+
 
 # 渲染系统
 class RenderSystem:
@@ -101,7 +114,7 @@ class RenderSystem:
         self.block_size = block_size
         self.play_filed = play_filed
         self.score_board = score_board
-
+        self.font = pygame.font.Font(None, 36)
     def process(self, entities):
         self.screen.fill((0, 0, 0))
         # 渲染游戏区域
@@ -109,7 +122,7 @@ class RenderSystem:
 
         # 渲染分数和下一个方块
         self.score_board.fill((255,255,255))
-        self.screen.blit(self.score_board, (self.play_filed.get_size()[0]*40-self.score_board.get_size()[0], 0))
+        self.screen.blit(self.score_board, (self.screen.get_width()-self.score_board.get_size()[0], 0))
         for entity in entities:
             if entity.has_components(PositionComponent, ShapeComponent, ColorComponent):
                 position = entity.get_component(PositionComponent)
@@ -121,6 +134,11 @@ class RenderSystem:
                         if shape.shape[i][j] == 1:
                             block_rect = pygame.Rect((position.x + j) * self.block_size, (position.y + i) * self.block_size, self.block_size, self.block_size)
                             pygame.draw.rect(self.screen, block.color, block_rect)
+            if entity.has_components(MapComponent):
+                map_mat = entity.get_component(MapComponent)
+                height_text = self.font.render(str(map_mat.height), True, (0,0, 255))
+                height_rect = height_text.get_rect(center=(self.screen.get_width() - self.score_board.get_rect().centerx, self.score_board.get_rect().centery))
+                self.screen.blit(height_text, height_rect)
 
 class MapSystem:
     def __init__(self, playfield_mat) -> None:
@@ -135,3 +153,7 @@ class MapSystem:
             map_mat = map_entity.get_component(MapComponent)
             if not state.active:
                 map_mat.map[position.y:position.y+shape.height, position.x:position.x+shape.width] |= np.asarray(shape.shape)
+                map_mat.height = np.max(np.where(map_mat.map[::-1]==1)[0])+1
+                if map_mat.height >= self.playfield_mat.shape[0]:
+                    pygame.event.post(pygame.event.Event(pygame.USEREVENT+2))
+                    return
