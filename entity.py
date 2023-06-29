@@ -22,7 +22,7 @@ class EntityManager:
         return entity
 
     def destroy_entity(self, entity):
-        self.entities.remove(entity)
+        del self.entities[entity]
 
 # 实体类
 class Entity:

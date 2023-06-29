@@ -12,7 +12,7 @@ import numpy as np
 from world import World
 from entity import EntityManager
 from component import PositionComponent, ShapeComponent, ColorComponent, SpeedComponent, StateComponent, MapComponent
-from system import InputSystem, MovementSystem, CollisionSystem, ClearLinesSystem, RenderSystem, MapSystem
+from system import InputSystem, MovementSystem, CollisionSystem, ClearLinesSystem, RenderSystem, MapSystem, SpawnSystem
 
 # 游戏类
 class Game:
@@ -20,25 +20,15 @@ class Game:
         pygame.init()
         self.cfg = cfg
         self.get_params()
-        world = World(self.PLAYFIELD_WIDTH, self.PLAYFIELD_HEIGHT)
+        self.world = World(self.PLAYFIELD_WIDTH, self.PLAYFIELD_HEIGHT)
         self.screen = pygame.display.set_mode((self.SCREEN_WIDTH, self.SCREEN_HEIGHT), vsync=True)
         self.play_field = pygame.Surface((self.PLAYFIELD_WIDTH, self.PLAYFIELD_HEIGHT))
-        self.score_board = pygame.Surface((self.SCOREBOARD_WIDTH, self.SCOREBOARD_HEIGHT))
+        self.score_board = pygame.Surface((self.SCOREBOARD_WIDTH, self.SCREEN_HEIGHT))
         pygame.display.set_caption("The Cube")
         self.clock = pygame.time.Clock()
         self.running = True
         self.fall_time = 0
         self.entity_manager = EntityManager()
-
-        self.systems = {
-            'InputSystem': InputSystem(),
-            'MovementSystem': MovementSystem(),
-            'CollisionSystem': CollisionSystem(world.playfield_width, world.playfield_height),
-            'ClearLinesSystem': ClearLinesSystem(),
-            'RenderSystem': RenderSystem(self.screen, self.play_field, self.score_board, self.BLOCK_SIZE),
-            'MapSystem': MapSystem(world.mat)
-        }
-
         self.shapes = [
             [[1, 1, 1, 1]],
             [[1, 1], [1, 1]],
@@ -48,6 +38,7 @@ class Game:
             [[1, 1, 0], [0, 1, 1]],
             [[0, 1, 0], [1, 1, 1]]
         ]
+        self._init_system()
         self.init_map()
         self.spawn_block()
 
@@ -63,16 +54,35 @@ class Game:
         self.FPS = self.cfg['FPS']
         self.FALL_SPEED = self.cfg['FALL_SPEED']   # ms
 
+    def _init_system(self):
+        self.systems = {
+            'InputSystem': InputSystem(),
+            'MovementSystem': MovementSystem(),
+            'CollisionSystem': CollisionSystem(self.world.playfield_width, self.world.playfield_height),
+            'ClearLinesSystem': ClearLinesSystem(),
+            'RenderSystem': RenderSystem(self.screen, self.play_field, self.score_board, self.BLOCK_SIZE),
+            'MapSystem': MapSystem(self.world.mat),
+            'SpawnSystem': SpawnSystem(self.shapes, self.PLAYFIELD_WIDTH)
+        }
+    
     def spawn_block(self):
         shape = random.choice(self.shapes)
+        next_shape = random.choice(self.shapes)
         # shape = self.shapes[1]
 
         entity = self.entity_manager.create_entity('block')
+        next_entity = self.entity_manager.create_entity('next_block')
         entity.add_component(PositionComponent(self.PLAYFIELD_WIDTH // 2 - len(shape[0]) // 2, 0))
         entity.add_component(SpeedComponent(0, 5))
         entity.add_component(ShapeComponent(shape))
         entity.add_component(ColorComponent())
         entity.add_component(StateComponent())
+
+        next_entity.add_component(PositionComponent(self.PLAYFIELD_WIDTH // 2 - len(next_shape[0]) // 2, 0))
+        next_entity.add_component(SpeedComponent(0, 5))
+        next_entity.add_component(ShapeComponent(next_shape))
+        next_entity.add_component(ColorComponent())
+        next_entity.add_component(StateComponent())
     
     def init_map(self):
         map_entity = self.entity_manager.create_entity('map')
@@ -86,8 +96,7 @@ class Game:
             if event.type == pygame.USEREVENT + 1:
                 self.systems['MapSystem'].process(self.entity_manager.entities)
                 self.systems['ClearLinesSystem'].process(self.entity_manager.entities)
-
-                self.spawn_block()
+                self.systems['SpawnSystem'].process(self.entity_manager)
             else:
                 continue
 
