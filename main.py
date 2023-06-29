@@ -8,7 +8,13 @@ Description :
 '''
 
 from game import Game
+import yaml
+
+def get_config(file_path):
+    config = yaml.safe_load(open(file_path, 'r'))
+    return config
 
 if __name__ == '__main__':
-    game = Game()
+    config = get_config('config.yaml')
+    game = Game(config)
     game.run()

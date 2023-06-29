@@ -10,11 +10,15 @@ Description :
 # 实体管理器
 class EntityManager:
     def __init__(self):
-        self.entities = []
+        self.entities = {}
 
-    def create_entity(self):
+    def create_entity(self, id):
         entity = Entity()
-        self.entities.append(entity)
+        if id not in self.entities:
+            self.entities[id] = [entity]
+        else:
+            self.entities[id].append(entity)
+        # self.entities.append(entity)
         return entity
 
     def destroy_entity(self, entity):

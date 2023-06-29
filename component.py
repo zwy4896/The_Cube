@@ -37,4 +37,7 @@ class StateComponent:
 class MapComponent:
     def __init__(self, map_mat) -> None:
         self.map = map_mat
+        self.color_map = np.zeros_like(self.map, dtype=object)
         self.height = 0
+        self.lines_cleared = 0
+        self.empty_row = np.zeros((1, self.map.shape[1]), dtype=int)
