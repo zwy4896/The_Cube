@@ -23,7 +23,7 @@ class Game:
         self.world = World(self.PLAYFIELD_WIDTH, self.PLAYFIELD_HEIGHT)
         self.screen = pygame.display.set_mode((self.SCREEN_WIDTH, self.SCREEN_HEIGHT), vsync=True)
         self.play_field = pygame.Surface((self.PLAYFIELD_WIDTH, self.PLAYFIELD_HEIGHT))
-        self.score_board = pygame.Surface((self.SCOREBOARD_WIDTH, self.SCREEN_HEIGHT))
+        self.score_board = pygame.Surface((self.SCOREBOARD_WIDTH, self.SCOREBOARD_HEIGHT))
         pygame.display.set_caption("The Cube")
         self.clock = pygame.time.Clock()
         self.running = True
@@ -66,27 +66,34 @@ class Game:
         }
     
     def spawn_block(self):
-        shape = random.choice(self.shapes)
-        next_shape = random.choice(self.shapes)
-        # shape = self.shapes[1]
+        random_shapes = random.choices(self.shapes, k=2)
+        shape = random_shapes[0]
+        next_shape = random_shapes[1]
+        self.create_entity(
+            'block', 
+            PositionComponent(self.world.playfield_width // 2 - len(shape[0]) // 2, 0),
+            SpeedComponent(0, 5), 
+            ShapeComponent(shape), 
+            ColorComponent(), 
+            StateComponent()
+        )
 
-        entity = self.entity_manager.create_entity('block')
-        next_entity = self.entity_manager.create_entity('next_block')
-        entity.add_component(PositionComponent(self.PLAYFIELD_WIDTH // 2 - len(shape[0]) // 2, 0))
-        entity.add_component(SpeedComponent(0, 5))
-        entity.add_component(ShapeComponent(shape))
-        entity.add_component(ColorComponent())
-        entity.add_component(StateComponent())
+        self.create_entity(
+            'next_block',
+            PositionComponent(self.world.playfield_width // 2 - len(next_shape[0]) // 2, 0),
+            SpeedComponent(0, 5), 
+            ShapeComponent(next_shape), 
+            ColorComponent(),
+            StateComponent()
+        )
 
-        next_entity.add_component(PositionComponent(self.PLAYFIELD_WIDTH // 2 - len(next_shape[0]) // 2, 0))
-        next_entity.add_component(SpeedComponent(0, 5))
-        next_entity.add_component(ShapeComponent(next_shape))
-        next_entity.add_component(ColorComponent())
-        next_entity.add_component(StateComponent())
+    def create_entity(self, entity_type, *components):
+        entity = self.entity_manager.create_entity(entity_type)
+        for component in components:
+            entity.add_component(component)
     
     def init_map(self):
-        map_entity = self.entity_manager.create_entity('map')
-        map_entity.add_component(MapComponent(np.zeros((self.PLAYFIELD_HEIGHT, self.PLAYFIELD_WIDTH), dtype=int)))
+        self.create_entity('map', MapComponent(np.zeros((self.PLAYFIELD_HEIGHT, self.PLAYFIELD_WIDTH), dtype=int)))
 
     def handle_events(self):
         events = pygame.event.get()
@@ -111,12 +118,9 @@ class Game:
 
     def render(self):
         self.systems['RenderSystem'].process(self.entity_manager.entities)
-
         pygame.display.flip()
-        # self.clock.tick(self.FPS)
 
     def run(self):
-        # self.running = True
         while self.running:
             self.handle_events()
             self.update()

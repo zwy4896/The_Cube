@@ -14,11 +14,7 @@ class EntityManager:
 
     def create_entity(self, id):
         entity = Entity()
-        if id not in self.entities:
-            self.entities[id] = [entity]
-        else:
-            self.entities[id].append(entity)
-        # self.entities.append(entity)
+        self.entities[id] = entity
         return entity
 
     def destroy_entity(self, entity):
