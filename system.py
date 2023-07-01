@@ -24,12 +24,11 @@ class InputSystem:
         pygame.key.set_repeat(500, 50)
         for event in events:
             if event.type == pygame.KEYDOWN:
-                if entity.has_components(PositionComponent, ShapeComponent):
-                    position = entity.get_component(PositionComponent)
-                    shape = entity.get_component(ShapeComponent)
-                    state = entity.get_component(StateComponent)
-                    if state.active:
-                        self.handle_key_event(event.key, position, shape)
+                position = entity.get_component(PositionComponent)
+                shape = entity.get_component(ShapeComponent)
+                state = entity.get_component(StateComponent)
+                if state.active:
+                    self.handle_key_event(event.key, position, shape)
 
     def handle_key_event(self, key, position, shape):
         action = self.key_mapping.get(key)
@@ -48,13 +47,11 @@ class InputSystem:
 class MovementSystem:
     def process(self, entities):
         entity = entities['block']
-        if entity.has_components(PositionComponent, SpeedComponent):
-            position = entity.get_component(PositionComponent)
-            state = entity.get_component(StateComponent)
-
-            if state.active:
-                # 计算新的位置
-                position.y += 1
+        position = entity.get_component(PositionComponent)
+        state = entity.get_component(StateComponent)
+        if state.active:
+            # 计算新的位置
+            position.y += 1
 
 # 碰撞检测系统
 class CollisionSystem:
@@ -64,42 +61,35 @@ class CollisionSystem:
     def process(self, entities):
         entity = entities['block']
         map_entity = entities['map']
-        if entity.has_components(PositionComponent, ShapeComponent):
-            position = entity.get_component(PositionComponent)
-            shape = entity.get_component(ShapeComponent)
-            state = entity.get_component(StateComponent)
-            map_mat = map_entity.get_component(MapComponent)
-            # 检测方块是否碰到窗口底部
-            if position.y + shape.height >= self.playfield_height:
+        position = entity.get_component(PositionComponent)
+        shape = entity.get_component(ShapeComponent)
+        state = entity.get_component(StateComponent)
+        map_mat = map_entity.get_component(MapComponent)
+
+        # 检测是否到达最顶层
+        if map_mat.height >= self.playfield_height:
+            pygame.event.post(pygame.event.Event(pygame.USEREVENT+2))
+            return
+        # 检测方块是否碰到窗口底部
+        if position.y + shape.height >= self.playfield_height:
+            position.y = self.playfield_height - shape.height
+            # 停止方块的运动
+            state.active = False
+            pygame.event.post(pygame.event.Event(pygame.USEREVENT+1))
+            return
+        # 检测方块是否碰到左边界
+        if position.x < 0:
+            position.x = 0
+        elif position.x> self.playfield_width - shape.width:
+            # 限制右移
+            position.x = self.playfield_width - shape.width
+        # 检测方块的底部与其他方块的顶部碰撞
+        for idx, arr in enumerate(shape.shape[::-1]):
+            if np.count_nonzero(map_mat.map[position.y + shape.height-idx-1, position.x:position.x+shape.width].squeeze() & np.asarray(arr)):
                 # 停止方块的运动
-                position.y = self.playfield_height - shape.height
                 state.active = False
                 pygame.event.post(pygame.event.Event(pygame.USEREVENT+1))
                 return
-            # 检测方块是否碰到左边界
-            if position.x < 0:
-                position.x = 0
-                return
-            if position.x + shape.width > self.playfield_width:
-                # 限制右移
-                position.x = self.playfield_width - shape.width
-                return
-            # 检测方块的底部与其他方块的顶部碰撞
-            for idx, arr in enumerate(shape.shape[::-1]):
-                if np.count_nonzero(map_mat.map[position.y + shape.height-idx, position.x:position.x+shape.width].squeeze() & np.asarray(arr)):
-                    # 停止方块的运动
-                    state.active = False
-                    pygame.event.post(pygame.event.Event(pygame.USEREVENT+1))
-                    return
-    def _check_internal_collision(self, shape, position, map_mat):
-        interal_collision_mat = np.bitwise_xor(shape.shape, map_mat.map[position.y:position.y+shape.height, position.x:position.x+shape.width])
-        is_collision = (interal_collision_mat == shape.shape).all()
-
-        return is_collision
-    
-    def _check_outer_collision(self, shape, position, map_mat):
-        is_bottom_collision = np.bitwise_and(shape.shape[-1], map_mat.map[position.y+shape.height:position.y+shape.height+1, position.x:position.x+shape.width]).all()
-        is_left_collision = np.bitwise_and(shape.shape[:, 0], map_mat.map[position.y:position.y+shape.height, ])
 
 # 消行和得分系统
 class ClearLinesSystem:
@@ -127,7 +117,7 @@ class RenderSystem:
     def __init__(self, screen, play_field, score_board, block_size):
         self.screen = screen
         self.block_size = block_size
-        self.real_block_size = block_size-4
+        self.real_block_size = block_size-3
         self.play_field = play_field
         self.score_board = score_board
         self.font = pygame.font.Font(None, 36)
@@ -137,42 +127,31 @@ class RenderSystem:
         self.screen.blit(self.play_field, (0, 0))
         self.map_mat = entities['map'].get_component(MapComponent)
         
+        self._render_block(self.map_mat.active_map, self.map_mat.active_color_map)
+        self._render_block(self.map_mat.map, self.map_mat.color_map)
         self._render_score()
-        self._render_active_block(entities)
-        self._render_dead_block()
+        self._render_next_block(entities)
 
-    def _render_active_block(self, entities):
+    def _render_next_block(self, entities):
         next_shape = entities['next_block'].get_component(ShapeComponent)
         next_color = entities['next_block'].get_component(ColorComponent)
-        position = entities['block'].get_component(PositionComponent)
-        shape = entities['block'].get_component(ShapeComponent)
-        block = entities['block'].get_component(ColorComponent)
-        state = entities['block'].get_component(StateComponent)
-        if state.active:
-            # 获取方块的非零索引
-            nonzero_indices = np.where(np.asarray(shape.shape) != 0)
-            next_nonzero_indices = np.where(np.asarray(next_shape.shape) != 0)
-            # 计算方块的绘制位置
-            block_positions = (position.x + nonzero_indices[1], position.y + nonzero_indices[0])
-            next_block_positions = (11 + next_nonzero_indices[1], 10 + next_nonzero_indices[0])
-            # 创建方块表面
-            block_surface = pygame.Surface((self.real_block_size, self.real_block_size))
-            block_surface.fill(block.color)
-            next_block_surface = pygame.Surface((self.real_block_size, self.real_block_size))
-            next_block_surface.fill(next_color.color)
-            # 批量绘制所有方块
-            for x, y in zip(block_positions[0], block_positions[1]):
-                block_rect = pygame.Rect(x * self.block_size, y * self.block_size, self.real_block_size, self.real_block_size)
-                self.screen.blit(block_surface, block_rect)
-            for x, y in zip(next_block_positions[0], next_block_positions[1]):
-                next_block_rect = pygame.Rect(x * self.block_size, y * self.block_size, self.real_block_size, self.real_block_size)
-                self.screen.blit(next_block_surface, next_block_rect)
+        # 获取方块的非零索引
+        next_nonzero_indices = np.where(np.asarray(next_shape.shape) != 0)
+        # 计算方块的绘制位置
+        next_block_positions = (11 + next_nonzero_indices[1], 10 + next_nonzero_indices[0])
+        # 创建方块表面
+        next_block_surface = pygame.Surface((self.real_block_size, self.real_block_size))
+        next_block_surface.fill(next_color.color)
+        # 批量绘制所有方块
+        for x, y in zip(next_block_positions[0], next_block_positions[1]):
+            next_block_rect = pygame.Rect(x * self.block_size, y * self.block_size, self.real_block_size, self.real_block_size)
+            self.screen.blit(next_block_surface, next_block_rect)
 
-    def _render_dead_block(self):
-        nonzero_indices = np.where(self.map_mat.map != 0)
+    def _render_block(self, block_mat, color_mat):
+        nonzero_indices = np.where(block_mat != 0)
         for x, y in zip(nonzero_indices[0], nonzero_indices[1]):
             block_rect = pygame.Rect(y * self.block_size, x * self.block_size, self.real_block_size, self.real_block_size)
-            pygame.draw.rect(self.screen, self.map_mat.color_map[x][y], block_rect)
+            pygame.draw.rect(self.screen, color_mat[x][y], block_rect)
     
     def _render_score(self):
         self.score_board.fill((255,255,255))
@@ -182,8 +161,6 @@ class RenderSystem:
         self.screen.blit(score_text, score_rect)
     
 class MapSystem:
-    def __init__(self, playfield_mat) -> None:
-        self.playfield_mat = playfield_mat
     def process(self, entities):
         map_entity = entities['map']
         last_entity = entities['block']
@@ -194,13 +171,26 @@ class MapSystem:
         color = last_entity.get_component(ColorComponent)
         np_shape = np.asarray(shape.shape)
         color_map_copy = map_mat.color_map.copy()
+
+        if state.active:
+            active_color_map_cache = np.zeros_like(map_mat.active_color_map)
+            map_mat.active_map*=0
+            map_mat.active_map[position.y:position.y+shape.height, position.x:position.x+shape.width] = np_shape
+            cache = active_color_map_cache[position.y:position.y+shape.height, position.x:position.x+shape.width] | np_shape
+            nonzero_indices = np.where(cache != 0)
+            for x, y in zip(nonzero_indices[0], nonzero_indices[1]):
+                if cache[x][y] == 1:
+                    active_color_map_cache[position.y:position.y+shape.height, position.x:position.x+shape.width][x][y] = color.color
+            map_mat.active_color_map = active_color_map_cache
         if not state.active:
-            map_mat_block = map_mat.map[position.y:position.y+shape.height, position.x:position.x+shape.width]
-            color_block = map_mat.color_map[position.y:position.y+shape.height, position.x:position.x+shape.width]
+            # 方块落地，更新动态方块状态矩阵
+            map_mat.active_map = np.where(map_mat.active_map==1, 0, map_mat.active_map)
+            map_mat_block = map_mat.map[position.y-1:position.y-1+shape.height, position.x:position.x+shape.width]
+            color_block = map_mat.color_map[position.y-1:position.y-1+shape.height, position.x:position.x+shape.width]
             map_mat_block |= np_shape
             color_mask = map_mat_block&np_shape
             nonzero_indices = np.where(color_mask != 0)
-            color_map_copy[position.y:position.y+shape.height, position.x:position.x+shape.width] = np_shape
+            color_map_copy[position.y-1:position.y-1+shape.height, position.x:position.x+shape.width] = np_shape
             
             for x, y in zip(nonzero_indices[0], nonzero_indices[1]):
                 if color_mask[x][y]==1:
@@ -208,9 +198,6 @@ class MapSystem:
                 else:
                     continue
             map_mat.height = np.max(np.where(map_mat.map[::-1]==1)[0])+1
-            if map_mat.height >= self.playfield_mat.shape[0]:
-                pygame.event.post(pygame.event.Event(pygame.USEREVENT+2))
-                return
 
 class SpawnSystem:
     def __init__(self, shapes, paly_field_width) -> None:

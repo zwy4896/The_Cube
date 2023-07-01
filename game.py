@@ -61,7 +61,7 @@ class Game:
             'CollisionSystem': CollisionSystem(self.world.playfield_width, self.world.playfield_height),
             'ClearLinesSystem': ClearLinesSystem(),
             'RenderSystem': RenderSystem(self.screen, self.play_field, self.score_board, self.BLOCK_SIZE),
-            'MapSystem': MapSystem(self.world.mat),
+            'MapSystem': MapSystem(),
             'SpawnSystem': SpawnSystem(self.shapes, self.PLAYFIELD_WIDTH)
         }
     
@@ -101,7 +101,7 @@ class Game:
             if event.type == pygame.QUIT or event.type == pygame.USEREVENT + 2:
                 self.running = False
             if event.type == pygame.USEREVENT + 1:
-                self.systems['MapSystem'].process(self.entity_manager.entities)
+                # self.systems['MapSystem'].process(self.entity_manager.entities)
                 self.systems['ClearLinesSystem'].process(self.entity_manager.entities)
                 self.systems['SpawnSystem'].process(self.entity_manager)
             else:
@@ -111,6 +111,7 @@ class Game:
 
     def update(self):
         self.systems['CollisionSystem'].process(self.entity_manager.entities)
+        self.systems['MapSystem'].process(self.entity_manager.entities)
         current_time = pygame.time.get_ticks()
         if current_time - self.fall_time >= self.FALL_SPEED:
             self.systems['MovementSystem'].process(self.entity_manager.entities)
