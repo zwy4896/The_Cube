@@ -41,6 +41,8 @@ class Game:
         self._init_system()
         self.init_map()
         self.spawn_block()
+        self.game_over = False
+        self.restart = False
 
     def get_params(self):
         # 游戏常量
@@ -61,7 +63,7 @@ class Game:
             'CollisionSystem': CollisionSystem(self.world.playfield_width, self.world.playfield_height),
             'ClearLinesSystem': ClearLinesSystem(),
             'RenderSystem': RenderSystem(self.screen, self.play_field, self.score_board, self.BLOCK_SIZE),
-            'MapSystem': MapSystem(self.world.mat),
+            'MapSystem': MapSystem(),
             'SpawnSystem': SpawnSystem(self.shapes, self.PLAYFIELD_WIDTH)
         }
     
@@ -72,7 +74,7 @@ class Game:
         self.create_entity(
             'block', 
             PositionComponent(self.world.playfield_width // 2 - len(shape[0]) // 2, 0),
-            SpeedComponent(0, 5), 
+            SpeedComponent(0, 1000), 
             ShapeComponent(shape), 
             ColorComponent(), 
             StateComponent()
@@ -81,7 +83,7 @@ class Game:
         self.create_entity(
             'next_block',
             PositionComponent(self.world.playfield_width // 2 - len(next_shape[0]) // 2, 0),
-            SpeedComponent(0, 5), 
+            SpeedComponent(0, 1000), 
             ShapeComponent(next_shape), 
             ColorComponent(),
             StateComponent()
@@ -101,7 +103,9 @@ class Game:
             if event.type == pygame.QUIT or event.type == pygame.USEREVENT + 2:
                 self.running = False
             if event.type == pygame.USEREVENT + 1:
-                self.systems['MapSystem'].process(self.entity_manager.entities)
+                # 方块落触底或碰撞
+                # 1. 判断消行
+                # 2. 重新生成方块
                 self.systems['ClearLinesSystem'].process(self.entity_manager.entities)
                 self.systems['SpawnSystem'].process(self.entity_manager)
             else:
@@ -110,11 +114,13 @@ class Game:
         self.systems['InputSystem'].process(events, self.entity_manager.entities)
 
     def update(self):
+        # 检测是否碰撞（触底、碰撞、左右界）
         self.systems['CollisionSystem'].process(self.entity_manager.entities)
-        current_time = pygame.time.get_ticks()
-        if current_time - self.fall_time >= self.FALL_SPEED:
-            self.systems['MovementSystem'].process(self.entity_manager.entities)
-            self.fall_time = current_time
+        # 根据碰撞结果更新map
+        self.systems['MapSystem'].process(self.entity_manager.entities)
+        self.systems['MovementSystem'].process(self.entity_manager.entities)
+        # 更新map
+        self.systems['MapSystem'].process(self.entity_manager.entities)
 
     def render(self):
         self.systems['RenderSystem'].process(self.entity_manager.entities)
@@ -123,7 +129,18 @@ class Game:
     def run(self):
         while self.running:
             self.handle_events()
-            self.update()
-            self.render()
-            self.clock.tick(self.FPS)
+            map_comp = self.entity_manager.entities['map'].get_component(MapComponent)
+            paused = map_comp.paused
+            self.game_over = map_comp.game_over
+            self.restart = map_comp.restart
+            if not paused and not self.game_over:
+                if not self.restart:
+                    self.update()
+                    self.render()
+                    self.clock.tick(self.FPS)
+                else:
+                    self.restart = False
+                    self._init_system()
+                    self.init_map()
+                    self.spawn_block()
         pygame.quit()
