@@ -44,3 +44,7 @@ class MapComponent:
         self.height = 0
         self.lines_cleared = 0
         self.empty_row = np.zeros((1, self.map.shape[1]), dtype=int)
+        self.paused = False
+        self.game_over = False
+        self.score = 0
+        self.restart = False
