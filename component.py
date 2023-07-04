@@ -33,6 +33,8 @@ class ColorComponent:
 class StateComponent:
     def __init__(self, active=True) -> None:
         self.active = active
+        self.collision = False
+        self.direction = ''
 
 class MapComponent:
     def __init__(self, map_mat) -> None:

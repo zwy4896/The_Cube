@@ -69,7 +69,8 @@ class Game:
     
     def spawn_block(self):
         random_shapes = random.choices(self.shapes, k=2)
-        shape = random_shapes[0]
+        shape = self.shapes[0]
+        # shape = random_shapes[0]
         next_shape = random_shapes[1]
         self.create_entity(
             'block', 
@@ -114,13 +115,12 @@ class Game:
         self.systems['InputSystem'].process(events, self.entity_manager.entities)
 
     def update(self):
+        self.systems['MapSystem'].process(self.entity_manager.entities)
         # 检测是否碰撞（触底、碰撞、左右界）
         self.systems['CollisionSystem'].process(self.entity_manager.entities)
         # 根据碰撞结果更新map
         self.systems['MapSystem'].process(self.entity_manager.entities)
         self.systems['MovementSystem'].process(self.entity_manager.entities)
-        # 更新map
-        self.systems['MapSystem'].process(self.entity_manager.entities)
 
     def render(self):
         self.systems['RenderSystem'].process(self.entity_manager.entities)
