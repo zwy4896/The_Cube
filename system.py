@@ -33,18 +33,19 @@ class InputSystem:
                 self.speed = entity.get_component(SpeedComponent)
                 self.map_comp = map_entity.get_component(MapComponent)
                 if state.active:
-                    self.handle_key_event(event.key, position, shape)
+                    self.handle_key_event(event.key, position, shape, state)
 
-    def handle_key_event(self, key, position, shape):
+    def handle_key_event(self, key, position, shape, state):
         action = self.key_mapping.get(key)
-        if action == 'left':
+        if action == 'left' and state.direction != 'left':
             position.x -= 1
-        elif action == 'right':
+        elif action == 'right' and state.direction != 'right':
             position.x += 1
-        elif action == 'down':
+        elif action == 'down' and state.direction != 'bottom':
             position.y += 1
         elif action == 'rotate':
             # TODO: 考虑所在空间容不下旋转后的形状
+            state.direction = ''
             shape.shape = np.rot90(shape.shape, -1)
             shape.width = len(shape.shape[0])
             shape.height = len(shape.shape)
@@ -84,27 +85,66 @@ class CollisionSystem:
         state = entity.get_component(StateComponent)
         map_mat = map_entity.get_component(MapComponent)
 
-        # 检测方块是否碰到边界
-        # TODO: 考虑运动方块左/右边缘与静止方块右/左边缘发生碰撞
-        position.x = max(0, min(position.x, self.playfield_width - shape.width))
+        np_shape = np.asarray(shape.shape)
+        active_block_map = map_mat.active_map
+        dead_block_map = map_mat.map
+
+        map_left_boundary = active_block_map[:, 0]
+        map_right_boundary = active_block_map[:, -1]
+        map_bottom_boundary = active_block_map[-1, :]
+
+        active_block_left_boundary = np_shape[:, 0]
+        active_block_right_boundary = np_shape[:, -1]
+        active_block_bottom_boundary = np_shape[-1, :]
+
+        indices = np.where(dead_block_map[:, position.x:position.x+shape.width]==1)[0]
+        if len(indices) > 0:
+            dead_block_top_row = np.min(indices)
+        else:
+            dead_block_top_row = self.playfield_height-1
         # 检测是否到达最顶层
         if map_mat.height >= self.playfield_height:
             map_mat.game_over = True
             return
-        # 检测方块是否碰到窗口底部
-        if position.y + shape.height >= self.playfield_height:
-            position.y = self.playfield_height - shape.height
-            # 停止方块的运动
+        
+        if np.any(map_bottom_boundary == 1):
+            # 下边界
             state.active = False
+            state.collision = True
+            state.direction = 'bottom'
             pygame.event.post(pygame.event.Event(pygame.USEREVENT+1))
             return
-        # 检测方块的底部与其他方块的顶部碰撞
-        for idx, arr in enumerate(shape.shape[::-1]):
-            if np.any(map_mat.map[position.y + shape.height-idx, position.x:position.x+shape.width].squeeze() & np.asarray(arr)):
-                # 停止方块的运动
-                state.active = False
-                pygame.event.post(pygame.event.Event(pygame.USEREVENT+1))
-                return
+        # 检测方块是否落在其他方块顶部
+        if state.direction != 'bottom':
+            for idx, arr in enumerate(np_shape):
+                if np.any(map_mat.map[position.y + idx + 1, position.x:position.x+shape.width].squeeze() & arr):
+                    # 停止方块的运动
+                    state.active = False
+                    state.collision = True
+                    state.direction = 'bottom'
+                    pygame.event.post(pygame.event.Event(pygame.USEREVENT+1))
+                    return
+        # 检测方块是否碰到边界
+        if np.any(map_left_boundary == 1):
+            # 左边界
+            state.collision = True
+            state.direction = 'left'
+        elif np.any(map_right_boundary == 1):
+            # 右边界
+            state.collision = True
+            state.direction = 'right'
+        else:
+            state.collision = False
+            state.direction = ''
+        # 运动方块左/右边缘与静止方块右/左边缘发生碰撞
+        # 检测方块左右是否碰撞
+        for idx, arr in enumerate(np_shape.T):
+            if state.direction != 'left' and np.any(map_mat.map[position.y:position.y+shape.height, position.x+idx-1].squeeze() & arr):
+                state.collision = True
+                state.direction = 'left'
+            elif state.direction != 'right' and np.any(map_mat.map[position.y:position.y+shape.height, position.x+idx].squeeze() & arr):
+                state.collision = True
+                state.direction = 'right'
 
 # 消行和得分系统
 class ClearLinesSystem:
@@ -238,3 +278,10 @@ class SpawnSystem:
         next_entity.add_component(ShapeComponent(next_shape))
         next_entity.add_component(ColorComponent())
         next_entity.add_component(StateComponent())
+
+class RotationSystem:
+    def __init__(self) -> None:
+        pass
+
+    def process(self, entities):
+        pass
