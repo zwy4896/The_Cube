@@ -12,7 +12,7 @@ import numpy as np
 from world import World
 from entity import EntityManager
 from component import PositionComponent, ShapeComponent, ColorComponent, SpeedComponent, StateComponent, MapComponent
-from system import InputSystem, MovementSystem, CollisionSystem, ClearLinesSystem, RenderSystem, MapSystem, SpawnSystem
+from system import InputSystem, MovementSystem, CollisionSystem, ClearLinesSystem, RenderSystem, MapSystem, SpawnSystem, RotationSystem
 
 # 游戏类
 class Game:
@@ -64,13 +64,13 @@ class Game:
             'ClearLinesSystem': ClearLinesSystem(),
             'RenderSystem': RenderSystem(self.screen, self.play_field, self.score_board, self.BLOCK_SIZE),
             'MapSystem': MapSystem(),
-            'SpawnSystem': SpawnSystem(self.shapes, self.PLAYFIELD_WIDTH)
+            'SpawnSystem': SpawnSystem(self.shapes, self.PLAYFIELD_WIDTH),
+            'RotationSystem': RotationSystem()
         }
     
     def spawn_block(self):
         random_shapes = random.choices(self.shapes, k=2)
-        shape = self.shapes[0]
-        # shape = random_shapes[0]
+        shape = random_shapes[0]
         next_shape = random_shapes[1]
         self.create_entity(
             'block', 
@@ -113,6 +113,7 @@ class Game:
                 continue
 
         self.systems['InputSystem'].process(events, self.entity_manager.entities)
+        self.systems['RotationSystem'].process(self.entity_manager.entities)
 
     def update(self):
         self.systems['MapSystem'].process(self.entity_manager.entities)

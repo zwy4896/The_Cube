@@ -25,6 +25,10 @@ class ShapeComponent:
         self.shape = shape
         self.width = len(shape[0])
         self.height = len(shape)
+        self.rotate = False
+        self.rotate_shape = shape
+        self.rotate_width = len(shape[0])
+        self.rotate_height = len(shape)
 
 class ColorComponent:
     def __init__(self):
@@ -40,7 +44,6 @@ class MapComponent:
     def __init__(self, map_mat) -> None:
         self.map = map_mat
         self.active_map = np.zeros_like(self.map, dtype=int)
-        self.block_map = np.zeros_like(self.map, dtype=int)
         self.active_color_map = np.zeros_like(self.map, dtype=object)
         self.color_map = np.zeros_like(self.map, dtype=object)
         self.height = 0
