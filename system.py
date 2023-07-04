@@ -44,11 +44,10 @@ class InputSystem:
         elif action == 'down' and state.direction != 'bottom':
             position.y += 1
         elif action == 'rotate':
-            # TODO: 考虑所在空间容不下旋转后的形状
-            state.direction = ''
-            shape.shape = np.rot90(shape.shape, -1)
-            shape.width = len(shape.shape[0])
-            shape.height = len(shape.shape)
+            shape.rotate = True
+            shape.rotate_shape = np.rot90(shape.shape, -1)
+            shape.rotate_width = len(shape.rotate_shape[0])
+            shape.rotate_height = len(shape.rotate_shape)
         elif action == 'quick_drop':
             self.speed.y = 1   # ms
         elif action == 'pause':
@@ -93,15 +92,6 @@ class CollisionSystem:
         map_right_boundary = active_block_map[:, -1]
         map_bottom_boundary = active_block_map[-1, :]
 
-        active_block_left_boundary = np_shape[:, 0]
-        active_block_right_boundary = np_shape[:, -1]
-        active_block_bottom_boundary = np_shape[-1, :]
-
-        indices = np.where(dead_block_map[:, position.x:position.x+shape.width]==1)[0]
-        if len(indices) > 0:
-            dead_block_top_row = np.min(indices)
-        else:
-            dead_block_top_row = self.playfield_height-1
         # 检测是否到达最顶层
         if map_mat.height >= self.playfield_height:
             map_mat.game_over = True
@@ -280,8 +270,14 @@ class SpawnSystem:
         next_entity.add_component(StateComponent())
 
 class RotationSystem:
-    def __init__(self) -> None:
-        pass
-
     def process(self, entities):
-        pass
+        shape = entities['block'].get_component(ShapeComponent)
+        position = entities['block'].get_component(PositionComponent)
+        map_mat = entities['map'].get_component(MapComponent)
+        if shape.rotate:
+            shape.rotate = False
+            available_mat = map_mat.map[position.y:position.y+shape.rotate_height, position.x:position.x+shape.rotate_width]
+            if not np.any(np.where(available_mat==1)) and available_mat.shape[1]==shape.rotate_width:
+                shape.shape = shape.rotate_shape
+                shape.height = shape.rotate_height
+                shape.width = shape.rotate_width
