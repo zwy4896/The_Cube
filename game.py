@@ -125,7 +125,6 @@ class Game:
 
     def render(self):
         self.systems['RenderSystem'].process(self.entity_manager.entities)
-        pygame.display.flip()
 
     def run(self):
         while self.running:
@@ -139,6 +138,8 @@ class Game:
                     self.update()
                     self.render()
                     self.clock.tick(self.FPS)
+                    pygame.display.update()
+
                 else:
                     self.restart = False
                     self._init_system()
