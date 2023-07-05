@@ -75,7 +75,7 @@ class Game:
         self.create_entity(
             'block', 
             PositionComponent(self.world.playfield_width // 2 - len(shape[0]) // 2, 0),
-            SpeedComponent(0, 1000), 
+            SpeedComponent(0, self.FALL_SPEED), 
             ShapeComponent(shape), 
             ColorComponent(), 
             StateComponent()
@@ -84,7 +84,7 @@ class Game:
         self.create_entity(
             'next_block',
             PositionComponent(self.world.playfield_width // 2 - len(next_shape[0]) // 2, 0),
-            SpeedComponent(0, 1000), 
+            SpeedComponent(0, self.FALL_SPEED), 
             ShapeComponent(next_shape), 
             ColorComponent(),
             StateComponent()
@@ -96,7 +96,7 @@ class Game:
             entity.add_component(component)
     
     def init_map(self):
-        self.create_entity('map', MapComponent(np.zeros((self.PLAYFIELD_HEIGHT, self.PLAYFIELD_WIDTH), dtype=int)))
+        self.create_entity('map', MapComponent(np.zeros((self.PLAYFIELD_HEIGHT, self.PLAYFIELD_WIDTH), dtype=int), self.FALL_SPEED))
 
     def handle_events(self):
         events = pygame.event.get()

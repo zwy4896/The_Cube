@@ -257,6 +257,7 @@ class SpawnSystem:
         self.shapes = shapes
         self.paly_field_width = paly_field_width
     def process(self, entity_manager):
+        drop_speed = entity_manager.entities['map'].get_component(MapComponent).drop_speed
         next_block = entity_manager.entities['next_block']
         entity_manager.entities['block'] = next_block
 
@@ -264,7 +265,7 @@ class SpawnSystem:
         next_entity = entity_manager.create_entity('next_block')
 
         next_entity.add_component(PositionComponent(self.paly_field_width // 2 - len(next_shape[0]) // 2, 0))
-        next_entity.add_component(SpeedComponent(0, 1000))
+        next_entity.add_component(SpeedComponent(0, drop_speed))
         next_entity.add_component(ShapeComponent(next_shape))
         next_entity.add_component(ColorComponent())
         next_entity.add_component(StateComponent())

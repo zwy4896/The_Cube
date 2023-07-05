@@ -41,7 +41,7 @@ class StateComponent:
         self.direction = ''
 
 class MapComponent:
-    def __init__(self, map_mat) -> None:
+    def __init__(self, map_mat, block_drop_speed) -> None:
         self.map = map_mat
         self.active_map = np.zeros_like(self.map, dtype=int)
         self.active_color_map = np.zeros_like(self.map, dtype=object)
@@ -53,3 +53,4 @@ class MapComponent:
         self.game_over = False
         self.score = 0
         self.restart = False
+        self.drop_speed = block_drop_speed
