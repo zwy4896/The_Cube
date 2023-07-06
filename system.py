@@ -37,24 +37,31 @@ class InputSystem:
 
     def handle_key_event(self, key, position, shape, state):
         action = self.key_mapping.get(key)
-        if action == 'left' and state.direction != 'left':
-            position.x -= 1
-        elif action == 'right' and state.direction != 'right':
-            position.x += 1
-        elif action == 'down' and state.direction != 'bottom':
-            position.y += 1
-        elif action == 'rotate':
-            shape.rotate = True
-            shape.rotate_shape = np.rot90(shape.shape, -1)
-            shape.rotate_width = len(shape.rotate_shape[0])
-            shape.rotate_height = len(shape.rotate_shape)
-        elif action == 'quick_drop':
-            self.speed.y = 1   # ms
-        elif action == 'pause':
-            self.map_comp.paused = not self.map_comp.paused
-        elif action == 'restart':
-            self.map_comp.game_over = False
-            self.map_comp.restart = True
+        if not self.map_comp.paused:
+            if action == 'left' and state.direction != 'left':
+                position.x -= 1
+            elif action == 'right' and state.direction != 'right':
+                position.x += 1
+            elif action == 'down' and state.direction != 'bottom':
+                position.y += 1
+            elif action == 'rotate':
+                shape.rotate = True
+                shape.rotate_shape = np.rot90(shape.shape, -1)
+                shape.rotate_width = len(shape.rotate_shape[0])
+                shape.rotate_height = len(shape.rotate_shape)
+            elif action == 'quick_drop':
+                self.speed.y = 0.5   # ms
+            elif action == 'pause':
+                self.map_comp.paused = not self.map_comp.paused
+            elif action == 'restart':
+                self.map_comp.game_over = False
+                self.map_comp.restart = True
+        else:
+            if action == 'pause':
+                self.map_comp.paused = not self.map_comp.paused
+            elif action == 'restart':
+                self.map_comp.game_over = False
+                self.map_comp.restart = True
 
 # 移动系统
 class MovementSystem:
@@ -87,7 +94,6 @@ class CollisionSystem:
 
         np_shape = np.asarray(shape.shape)
         active_block_map = map_mat.active_map
-        dead_block_map = map_mat.map
 
         map_left_boundary = active_block_map[:, 0]
         map_right_boundary = active_block_map[:, -1]
@@ -170,6 +176,8 @@ class RenderSystem:
         self.score_board = pygame.Surface((config.SCOREBOARD_WIDTH, config.SCOREBOARD_HEIGHT))
         self.game_over_text = self.font.render("You Died!", True, (255, 0, 0))
         self.game_over_text_rect = self.game_over_text.get_rect(center=((self.play_field.get_width()*self.block_size) // 2, (self.play_field.get_height()*self.block_size) // 2))
+        self.pause_text = self.font.render("PAUSED", True, (255, 0, 0))
+        self.pause_text_rect = self.game_over_text.get_rect(center=((self.play_field.get_width()*self.block_size) // 2, (self.play_field.get_height()*self.block_size) // 2))
 
     def process(self, entities):
         self.screen.fill((0, 0, 0))
@@ -182,7 +190,11 @@ class RenderSystem:
         self._render_next_block(entities)
         if self.map_mat.game_over:
             self._render_game_over()
+        if self.map_mat.paused:
+            self._render_pause()
 
+    def _render_pause(self):
+        self.screen.blit(self.pause_text, self.pause_text_rect)
     def _render_next_block(self, entities):
         next_shape = entities['next_block'].get_component(ShapeComponent)
         next_color = entities['next_block'].get_component(ColorComponent)

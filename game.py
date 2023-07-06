@@ -66,10 +66,13 @@ class Game:
             self.restart = map_comp.restart
             if not paused and not self.game_over:
                 if not self.restart:
-                    self.update()
                     self.render()
+                    self.update()
                     self.game_manager.clock.tick(self.game_manager.config.FPS)
                     pygame.display.update()
                 else:
                     self._restart()
+            elif paused:
+                self.render()
+                pygame.display.update()
         pygame.quit()
