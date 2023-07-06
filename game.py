@@ -11,92 +11,28 @@ import random
 import numpy as np
 from world import World
 from entity import EntityManager
+from manager import GameManager, Systems, Entities
 from component import PositionComponent, ShapeComponent, ColorComponent, SpeedComponent, StateComponent, MapComponent
 from system import InputSystem, MovementSystem, CollisionSystem, ClearLinesSystem, RenderSystem, MapSystem, SpawnSystem, RotationSystem
 
 # 游戏类
 class Game:
-    def __init__(self, cfg):
-        pygame.init()
-        self.cfg = cfg
-        self.get_params()
-        self.world = World(self.PLAYFIELD_WIDTH, self.PLAYFIELD_HEIGHT)
-        self.screen = pygame.display.set_mode((self.SCREEN_WIDTH, self.SCREEN_HEIGHT), vsync=True)
-        self.play_field = pygame.Surface((self.PLAYFIELD_WIDTH, self.PLAYFIELD_HEIGHT))
-        self.score_board = pygame.Surface((self.SCOREBOARD_WIDTH, self.SCOREBOARD_HEIGHT))
-        pygame.display.set_caption("The Cube")
-        self.clock = pygame.time.Clock()
+    def __init__(self, config_path):
+        self.game_manager = GameManager(config_path)
+        self.systems = Systems(self.game_manager)
+        self.entities = Entities(self.game_manager)
         self.running = True
         self.fall_time = 0
-        self.entity_manager = EntityManager()
-        self.shapes = [
-            [[1, 1, 1, 1]],
-            [[1, 1], [1, 1]],
-            [[1, 0, 0], [1, 1, 1]],
-            [[0, 0, 1], [1, 1, 1]],
-            [[0, 1, 1], [1, 1, 0]],
-            [[1, 1, 0], [0, 1, 1]],
-            [[0, 1, 0], [1, 1, 1]]
-        ]
-        self._init_system()
-        self.init_map()
-        self.spawn_block()
         self.game_over = False
         self.restart = False
 
-    def get_params(self):
-        # 游戏常量
-        self.SCREEN_WIDTH = self.cfg['SCREEN_WIDTH']
-        self.SCREEN_HEIGHT = self.cfg['SCREEN_HEIGHT']
-        self.BLOCK_SIZE = self.cfg['BLOCK_SIZE']
-        self.PLAYFIELD_WIDTH = self.cfg['PLAYFIELD_WIDTH']
-        self.PLAYFIELD_HEIGHT = self.cfg['PLAYFIELD_HEIGHT']
-        self.SCOREBOARD_WIDTH = self.cfg['SCOREBOARD_WIDTH']
-        self.SCOREBOARD_HEIGHT = self.cfg['SCOREBOARD_HEIGHT']
-        self.FPS = self.cfg['FPS']
-        self.FALL_SPEED = self.cfg['FALL_SPEED']   # ms
-
-    def _init_system(self):
-        self.systems = {
-            'InputSystem': InputSystem(),
-            'MovementSystem': MovementSystem(),
-            'CollisionSystem': CollisionSystem(self.world.playfield_width, self.world.playfield_height),
-            'ClearLinesSystem': ClearLinesSystem(),
-            'RenderSystem': RenderSystem(self.screen, self.play_field, self.score_board, self.BLOCK_SIZE),
-            'MapSystem': MapSystem(),
-            'SpawnSystem': SpawnSystem(self.shapes, self.PLAYFIELD_WIDTH),
-            'RotationSystem': RotationSystem()
-        }
-    
-    def spawn_block(self):
-        random_shapes = random.choices(self.shapes, k=2)
-        shape = random_shapes[0]
-        next_shape = random_shapes[1]
-        self.create_entity(
-            'block', 
-            PositionComponent(self.world.playfield_width // 2 - len(shape[0]) // 2, 0),
-            SpeedComponent(0, self.FALL_SPEED), 
-            ShapeComponent(shape), 
-            ColorComponent(), 
-            StateComponent()
-        )
-
-        self.create_entity(
-            'next_block',
-            PositionComponent(self.world.playfield_width // 2 - len(next_shape[0]) // 2, 0),
-            SpeedComponent(0, self.FALL_SPEED), 
-            ShapeComponent(next_shape), 
-            ColorComponent(),
-            StateComponent()
-        )
-
-    def create_entity(self, entity_type, *components):
-        entity = self.entity_manager.create_entity(entity_type)
-        for component in components:
-            entity.add_component(component)
-    
-    def init_map(self):
-        self.create_entity('map', MapComponent(np.zeros((self.PLAYFIELD_HEIGHT, self.PLAYFIELD_WIDTH), dtype=int), self.FALL_SPEED))
+    def _restart(self):
+        self.systems = Systems(self.game_manager)
+        self.entities = Entities(self.game_manager)
+        self.running = True
+        self.fall_time = 0
+        self.game_over = False
+        self.restart = False
 
     def handle_events(self):
         events = pygame.event.get()
@@ -107,30 +43,30 @@ class Game:
                 # 方块落触底或碰撞
                 # 1. 判断消行
                 # 2. 重新生成方块
-                self.systems['ClearLinesSystem'].process(self.entity_manager.entities)
-                self.systems['SpawnSystem'].process(self.entity_manager)
+                self.systems.sys_clear_line.process(self.entities.entity_manager.entities)
+                self.systems.sys_spawn.process(self.entities.entity_manager)
             else:
                 continue
 
-        self.systems['InputSystem'].process(events, self.entity_manager.entities)
-        self.systems['RotationSystem'].process(self.entity_manager.entities)
+        self.systems.sys_input.process(events, self.entities.entity_manager.entities)
+        self.systems.sys_rotation.process(self.entities.entity_manager.entities)
 
     def update(self):
-        self.systems['MapSystem'].process(self.entity_manager.entities)
+        self.systems.sys_map.process(self.entities.entity_manager.entities)
         # 检测是否碰撞（触底、碰撞、左右界）
-        self.systems['CollisionSystem'].process(self.entity_manager.entities)
+        self.systems.sys_collision.process(self.entities.entity_manager.entities)
         # 根据碰撞结果更新map
-        self.systems['MapSystem'].process(self.entity_manager.entities)
-        self.systems['MovementSystem'].process(self.entity_manager.entities)
+        self.systems.sys_map.process(self.entities.entity_manager.entities)
+        self.systems.sys_movement.process(self.entities.entity_manager.entities)
 
     def render(self):
-        self.systems['RenderSystem'].process(self.entity_manager.entities)
+        self.systems.sys_render.process(self.entities.entity_manager.entities)
         pygame.display.flip()
 
     def run(self):
         while self.running:
             self.handle_events()
-            map_comp = self.entity_manager.entities['map'].get_component(MapComponent)
+            map_comp = self.entities.entity_manager.entities['map'].get_component(MapComponent)
             paused = map_comp.paused
             self.game_over = map_comp.game_over
             self.restart = map_comp.restart
@@ -138,10 +74,7 @@ class Game:
                 if not self.restart:
                     self.update()
                     self.render()
-                    self.clock.tick(self.FPS)
+                    self.game_manager.clock.tick(self.game_manager.config.FPS)
                 else:
-                    self.restart = False
-                    self._init_system()
-                    self.init_map()
-                    self.spawn_block()
+                    self._restart()
         pygame.quit()

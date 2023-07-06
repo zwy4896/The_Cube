@@ -73,9 +73,10 @@ class MovementSystem:
 
 # 碰撞检测系统
 class CollisionSystem:
-    def __init__(self, playfield_width, playfield_height) -> None:
-        self.playfield_width = playfield_width
-        self.playfield_height = playfield_height
+    def __init__(self, config) -> None:
+        self.playfield_width = config.PLAYFIELD_WIDTH
+        self.playfield_height = config.PLAYFIELD_HEIGHT
+    
     def process(self, entities):
         entity = entities['block']
         map_entity = entities['map']
@@ -160,13 +161,13 @@ class ClearLinesSystem:
 
 # 渲染系统
 class RenderSystem:
-    def __init__(self, screen, play_field, score_board, block_size):
+    def __init__(self, screen, config):
         self.screen = screen
-        self.block_size = block_size
-        self.real_block_size = block_size-3
-        self.play_field = play_field
-        self.score_board = score_board
+        self.block_size = config.BLOCK_SIZE
+        self.real_block_size = self.block_size-3
         self.font = pygame.font.Font(None, 36)
+        self.play_field = pygame.Surface((config.PLAYFIELD_WIDTH, config.PLAYFIELD_HEIGHT))
+        self.score_board = pygame.Surface((config.SCOREBOARD_WIDTH, config.SCOREBOARD_HEIGHT))
         self.game_over_text = self.font.render("You Died!", True, (255, 0, 0))
         self.game_over_text_rect = self.game_over_text.get_rect(center=((self.play_field.get_width()*self.block_size) // 2, (self.play_field.get_height()*self.block_size) // 2))
 
@@ -253,9 +254,10 @@ class MapSystem:
             map_mat.height = np.max(np.where(map_mat.map[::-1]==1)[0])+1
 
 class SpawnSystem:
-    def __init__(self, shapes, paly_field_width) -> None:
+    def __init__(self, shapes, config) -> None:
         self.shapes = shapes
-        self.paly_field_width = paly_field_width
+        self.paly_field_width = config.PLAYFIELD_WIDTH
+        
     def process(self, entity_manager):
         drop_speed = entity_manager.entities['map'].get_component(MapComponent).drop_speed
         next_block = entity_manager.entities['next_block']
