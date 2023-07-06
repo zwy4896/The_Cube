@@ -7,13 +7,8 @@ Contact     : zoe4896@outlook.com
 Description : 
 '''
 import pygame
-import random
-import numpy as np
-from world import World
-from entity import EntityManager
 from manager import GameManager, Systems, Entities
-from component import PositionComponent, ShapeComponent, ColorComponent, SpeedComponent, StateComponent, MapComponent
-from system import InputSystem, MovementSystem, CollisionSystem, ClearLinesSystem, RenderSystem, MapSystem, SpawnSystem, RotationSystem
+from component import MapComponent
 
 # 游戏类
 class Game:
