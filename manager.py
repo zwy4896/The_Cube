@@ -68,7 +68,7 @@ class Entities:
         self.create_entity(
             'block',
             PositionComponent(self.config.PLAYFIELD_WIDTH // 2 - len(self.game_manager.shapes[0]) // 2, 0),
-            SpeedComponent(0, self.config.FALL_SPEED), 
+            SpeedComponent(0, self.config.FALL_SPEED, self.config.HARD_DROP_SPEED), 
             ShapeComponent(shape), 
             ColorComponent(), 
             StateComponent()
@@ -76,7 +76,7 @@ class Entities:
         self.create_entity(
             'next_block',
             PositionComponent(self.config.PLAYFIELD_WIDTH // 2 - len(self.game_manager.shapes[0]) // 2, 0),
-            SpeedComponent(0, self.config.FALL_SPEED), 
+            SpeedComponent(0, self.config.FALL_SPEED, self.config.HARD_DROP_SPEED), 
             ShapeComponent(next_shape), 
             ColorComponent(), 
             StateComponent()

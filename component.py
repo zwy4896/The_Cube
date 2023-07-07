@@ -16,9 +16,10 @@ class PositionComponent:
         self.y = y
 
 class SpeedComponent:
-    def __init__(self, x, y) -> None:
+    def __init__(self, x, y, hard_drop_speed) -> None:
         self.x = x
         self.y = y
+        self.hard_drop_speed = hard_drop_speed
     
 class ShapeComponent:
     def __init__(self, shape):
@@ -37,8 +38,10 @@ class ColorComponent:
 class StateComponent:
     def __init__(self, active=True) -> None:
         self.active = active
+        self.action = ''
         self.collision = False
         self.direction = ''
+        self.hard_drop = False
 
 class MapComponent:
     def __init__(self, map_mat, block_drop_speed) -> None:
