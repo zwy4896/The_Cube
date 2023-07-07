@@ -17,7 +17,7 @@ class InputSystem:
         pygame.K_RIGHT: 'right',
         pygame.K_DOWN: 'down',
         pygame.K_UP: 'rotate',
-        pygame.K_SPACE: 'quick_drop',
+        pygame.K_SPACE: 'hard_drop',
         pygame.K_p: 'pause',
         pygame.K_RETURN: 'restart',
     }
@@ -37,6 +37,8 @@ class InputSystem:
 
     def handle_key_event(self, key, position, shape, state):
         action = self.key_mapping.get(key)
+        state.action = action
+        # hard_drop过程中不响应按键操作
         if not self.map_comp.paused:
             if action == 'left' and state.direction != 'left':
                 position.x -= 1
@@ -49,8 +51,9 @@ class InputSystem:
                 shape.rotate_shape = np.rot90(shape.shape, -1)
                 shape.rotate_width = len(shape.rotate_shape[0])
                 shape.rotate_height = len(shape.rotate_shape)
-            elif action == 'quick_drop':
-                self.speed.y = 0.5   # ms
+            elif action == 'hard_drop':
+                state.hard_drop = True
+                self.speed.y = self.speed.hard_drop_speed   # ms
             elif action == 'pause':
                 self.map_comp.paused = not self.map_comp.paused
             elif action == 'restart':
@@ -70,13 +73,11 @@ class MovementSystem:
     def process(self, entities):
         entity = entities['block']
         position = entity.get_component(PositionComponent)
-        state = entity.get_component(StateComponent)
         speed = entity.get_component(SpeedComponent)
-        if state.active:
-            current_time = pygame.time.get_ticks()
-            if current_time - self.fall_time >= speed.y:
-                position.y += 1
-                self.fall_time = current_time
+        current_time = pygame.time.get_ticks()
+        if current_time - self.fall_time >= speed.y:
+            position.y += 1
+            self.fall_time = current_time
 
 # 碰撞检测系统
 class CollisionSystem:
@@ -267,8 +268,9 @@ class MapSystem:
 
 class SpawnSystem:
     def __init__(self, shapes, config) -> None:
+        self.config = config
         self.shapes = shapes
-        self.paly_field_width = config.PLAYFIELD_WIDTH
+        self.paly_field_width = self.config.PLAYFIELD_WIDTH
         
     def process(self, entity_manager):
         drop_speed = entity_manager.entities['map'].get_component(MapComponent).drop_speed
@@ -279,7 +281,7 @@ class SpawnSystem:
         next_entity = entity_manager.create_entity('next_block')
 
         next_entity.add_component(PositionComponent(self.paly_field_width // 2 - len(next_shape[0]) // 2, 0))
-        next_entity.add_component(SpeedComponent(0, drop_speed))
+        next_entity.add_component(SpeedComponent(0, drop_speed, self.config.HARD_DROP_SPEED))
         next_entity.add_component(ShapeComponent(next_shape))
         next_entity.add_component(ColorComponent())
         next_entity.add_component(StateComponent())
@@ -289,10 +291,9 @@ class RotationSystem:
         shape = entities['block'].get_component(ShapeComponent)
         position = entities['block'].get_component(PositionComponent)
         map_mat = entities['map'].get_component(MapComponent)
-        if shape.rotate:
-            shape.rotate = False
-            available_mat = map_mat.map[position.y:position.y+shape.rotate_height, position.x:position.x+shape.rotate_width]
-            if not np.any(np.where(available_mat==1)) and available_mat.shape[1]==shape.rotate_width:
-                shape.shape = shape.rotate_shape
-                shape.height = shape.rotate_height
-                shape.width = shape.rotate_width
+        shape.rotate = False
+        available_mat = map_mat.map[position.y:position.y+shape.rotate_height, position.x:position.x+shape.rotate_width]
+        if not np.any(np.where(available_mat==1)) and available_mat.shape[1]==shape.rotate_width:
+            shape.shape = shape.rotate_shape
+            shape.height = shape.rotate_height
+            shape.width = shape.rotate_width

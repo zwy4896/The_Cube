@@ -8,28 +8,20 @@ Description :
 '''
 import pygame
 from manager import GameManager, Systems, Entities
-from component import MapComponent
+from component import MapComponent, StateComponent, ShapeComponent
 
 # 游戏类
 class Game:
     def __init__(self, config_path):
         self.game_manager = GameManager(config_path)
+        self._init()
+
+    def _init(self):
         self.systems = Systems(self.game_manager)
         self.entities = Entities(self.game_manager)
         self.running = True
-        self.fall_time = 0
-        self.game_over = False
-        self.restart = False
 
-    def _restart(self):
-        self.systems = Systems(self.game_manager)
-        self.entities = Entities(self.game_manager)
-        self.running = True
-        self.fall_time = 0
-        self.game_over = False
-        self.restart = False
-
-    def handle_events(self):
+    def _handle_events(self):
         events = pygame.event.get()
         for event in events:
             if event.type == pygame.QUIT or event.type == pygame.USEREVENT + 2:
@@ -42,37 +34,44 @@ class Game:
                 self.systems.sys_spawn.process(self.entities.entity_manager)
             else:
                 continue
+        self.state = self.entities.entity_manager.entities['block'].get_component(StateComponent)
+        _shape = self.entities.entity_manager.entities['block'].get_component(ShapeComponent)
+        self.map = self.entities.entity_manager.entities['map'].get_component(MapComponent)
+        self.paused = self.map.paused
+        self.game_over = self.map.game_over
+        self.restart = self.map.restart
 
-        self.systems.sys_input.process(events, self.entities.entity_manager.entities)
-        self.systems.sys_rotation.process(self.entities.entity_manager.entities)
+        if self.map.game_over:
+            self.systems.sys_spawn.process(self.entities.entity_manager)
+        if not self.state.hard_drop:
+            self.systems.sys_input.process(events, self.entities.entity_manager.entities)
+        if _shape.rotate:
+            self.systems.sys_rotation.process(self.entities.entity_manager.entities)
 
-    def update(self):
+    def _update(self):
         self.systems.sys_map.process(self.entities.entity_manager.entities)
         # 检测是否碰撞（触底、碰撞、左右界）
         self.systems.sys_collision.process(self.entities.entity_manager.entities)
         # 根据碰撞结果更新map
         self.systems.sys_map.process(self.entities.entity_manager.entities)
-        self.systems.sys_movement.process(self.entities.entity_manager.entities)
+        if self.state.active:
+            self.systems.sys_movement.process(self.entities.entity_manager.entities)
 
-    def render(self):
+    def _render(self):
         self.systems.sys_render.process(self.entities.entity_manager.entities)
 
     def run(self):
         while self.running:
-            self.handle_events()
-            map_comp = self.entities.entity_manager.entities['map'].get_component(MapComponent)
-            paused = map_comp.paused
-            self.game_over = map_comp.game_over
-            self.restart = map_comp.restart
-            if not paused and not self.game_over:
+            self._handle_events()
+            if not self.paused and not self.game_over:
                 if not self.restart:
-                    self.update()
-                    self.render()
-                    self.game_manager.clock.tick(self.game_manager.config.FPS)
+                    self._update()
+                    self._render()
                     pygame.display.update()
                 else:
-                    self._restart()
-            elif paused:
-                self.render()
+                    self._init()
+            elif self.paused:
+                self._render()
                 pygame.display.update()
+            self.game_manager.clock.tick(self.game_manager.config.FPS)
         pygame.quit()
