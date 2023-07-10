@@ -40,11 +40,11 @@ class InputSystem:
         state.action = action
         # hard_drop过程中不响应按键操作
         if not self.map_comp.paused:
-            if action == 'left' and state.direction != 'left':
+            if action == 'left' and state.collide_side != 'left':
                 position.x -= 1
-            elif action == 'right' and state.direction != 'right':
+            elif action == 'right' and state.collide_side != 'right':
                 position.x += 1
-            elif action == 'down' and state.direction != 'bottom':
+            elif action == 'down' and state.collide_side != 'bottom':
                 position.y += 1
             elif action == 'rotate':
                 shape.rotate = True
@@ -109,40 +109,40 @@ class CollisionSystem:
             # 下边界
             state.active = False
             state.collision = True
-            state.direction = 'bottom'
+            state.collide_side = 'bottom'
             pygame.event.post(pygame.event.Event(pygame.USEREVENT+1))
             return
         # 检测方块是否落在其他方块顶部
-        if state.direction != 'bottom':
+        if state.collide_side != 'bottom':
             for idx, arr in enumerate(np_shape):
                 if np.any(map_mat.map[position.y + idx + 1, position.x:position.x+shape.width].squeeze() & arr):
                     # 停止方块的运动
                     state.active = False
                     state.collision = True
-                    state.direction = 'bottom'
+                    state.collide_side = 'bottom'
                     pygame.event.post(pygame.event.Event(pygame.USEREVENT+1))
                     return
         # 检测方块是否碰到边界
         if np.any(map_left_boundary == 1):
             # 左边界
             state.collision = True
-            state.direction = 'left'
+            state.collide_side = 'left'
         elif np.any(map_right_boundary == 1):
             # 右边界
             state.collision = True
-            state.direction = 'right'
+            state.collide_side = 'right'
         else:
             state.collision = False
-            state.direction = ''
+            state.collide_side = ''
         # 运动方块左/右边缘与静止方块右/左边缘发生碰撞
         # 检测方块左右是否碰撞
         for idx, arr in enumerate(np_shape.T):
-            if state.direction != 'left' and np.any(map_mat.map[position.y:position.y+shape.height, position.x+idx-1].squeeze() & arr):
+            if state.collide_side != 'left' and np.any(map_mat.map[position.y:position.y+shape.height, position.x+idx-1].squeeze() & arr):
                 state.collision = True
-                state.direction = 'left'
-            elif state.direction != 'right' and np.any(map_mat.map[position.y:position.y+shape.height, position.x+idx].squeeze() & arr):
+                state.collide_side = 'left'
+            elif state.collide_side != 'right' and np.any(map_mat.map[position.y:position.y+shape.height, position.x+idx].squeeze() & arr):
                 state.collision = True
-                state.direction = 'right'
+                state.collide_side = 'right'
 
 # 消行和得分系统
 class ClearLinesSystem:

@@ -40,7 +40,7 @@ class StateComponent:
         self.active = active
         self.action = ''
         self.collision = False
-        self.direction = ''
+        self.collide_side = ''
         self.hard_drop = False
 
 class MapComponent:
