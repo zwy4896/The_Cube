@@ -67,11 +67,10 @@ class Game:
                 if not self.restart:
                     self._update()
                     self._render()
-                    pygame.display.update()
                 else:
                     self._init()
             elif self.paused:
                 self._render()
-                pygame.display.update()
+            pygame.display.update()
             self.game_manager.clock.tick(self.game_manager.config.FPS)
         pygame.quit()
