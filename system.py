@@ -69,7 +69,7 @@ class InputSystem:
 # 移动系统
 class MovementSystem:
     def __init__(self) -> None:
-        self.fall_time = 0
+        self.fall_time = pygame.time.get_ticks()
     def process(self, entities):
         entity = entities['block']
         position = entity.get_component(PositionComponent)
