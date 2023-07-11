@@ -298,7 +298,7 @@ class SpawnSystem:
         next_entity.add_component(SpeedComponent(0, drop_speed, self.config.HARD_DROP_SPEED))
         next_entity.add_component(ShapeComponent(next_shape))
         next_entity.add_component(ColorComponent())
-        next_entity.add_component(StateComponent(self.config.LOCK_DELAY_FRAMES))
+        next_entity.add_component(StateComponent(lock_delay_frames=self.config.LOCK_DELAY_FRAMES))
 
 class RotationSystem:
     def process(self, entities):
