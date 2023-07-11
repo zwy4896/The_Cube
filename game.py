@@ -54,7 +54,7 @@ class Game:
         self.systems.sys_collision.process(self.entities.entity_manager.entities)
         # 根据碰撞结果更新map
         self.systems.sys_map.process(self.entities.entity_manager.entities)
-        if self.state.active:
+        if self.state.active and not self.state.is_blocked:
             self.systems.sys_movement.process(self.entities.entity_manager.entities)
 
     def _render(self):

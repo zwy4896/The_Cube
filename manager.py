@@ -71,7 +71,7 @@ class Entities:
             SpeedComponent(0, self.config.FALL_SPEED, self.config.HARD_DROP_SPEED), 
             ShapeComponent(shape), 
             ColorComponent(), 
-            StateComponent()
+            StateComponent(lock_delay_frames=self.config.LOCK_DELAY_FRAMES)
         )
         self.create_entity(
             'next_block',
@@ -79,13 +79,13 @@ class Entities:
             SpeedComponent(0, self.config.FALL_SPEED, self.config.HARD_DROP_SPEED), 
             ShapeComponent(next_shape), 
             ColorComponent(), 
-            StateComponent()
+            StateComponent(lock_delay_frames=self.config.LOCK_DELAY_FRAMES)
         )
 
     def _init_map(self):
         self.create_entity(
             'map',
-            MapComponent(np.zeros((self.config.PLAYFIELD_HEIGHT, self.config.PLAYFIELD_WIDTH), dtype=int), self.config.FALL_SPEED)
+            MapComponent(np.zeros((self.config.PLAYFIELD_HEIGHT, self.config.PLAYFIELD_WIDTH), dtype=int), self.config.FALL_SPEED, self.config.LOCK_DELAY_FRAMES)
         )
 
     def create_entity(self, entity_type, *components):

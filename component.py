@@ -36,15 +36,17 @@ class ColorComponent:
         self.color = (random.randint(50, 200), random.randint(50, 200), random.randint(50, 200))
 
 class StateComponent:
-    def __init__(self, active=True) -> None:
+    def __init__(self, active=True, lock_delay_frames=30) -> None:
         self.active = active
         self.action = ''
         self.collision = False
         self.collide_side = ''
         self.hard_drop = False
+        self.lock_delay_frames = lock_delay_frames
+        self.is_blocked = False
 
 class MapComponent:
-    def __init__(self, map_mat, block_drop_speed) -> None:
+    def __init__(self, map_mat, drop_speed, lock_delay_frames=30) -> None:
         self.map = map_mat
         self.active_map = np.zeros_like(self.map, dtype=int)
         self.active_color_map = np.zeros_like(self.map, dtype=object)
@@ -56,4 +58,5 @@ class MapComponent:
         self.game_over = False
         self.score = 0
         self.restart = False
-        self.drop_speed = block_drop_speed
+        self.drop_speed = drop_speed
+        self.lock_delay_frames = lock_delay_frames

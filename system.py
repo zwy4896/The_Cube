@@ -44,7 +44,7 @@ class InputSystem:
                 position.x -= 1
             elif action == 'right' and state.collide_side != 'right':
                 position.x += 1
-            elif action == 'down' and state.collide_side != 'bottom':
+            elif action == 'down' and state.collide_side != 'bottom' and not state.is_blocked:
                 position.y += 1
             elif action == 'rotate':
                 shape.rotate = True
@@ -81,6 +81,7 @@ class MovementSystem:
 
 # 碰撞检测系统
 class CollisionSystem:
+    # TODO: lock delay左右碰撞检测失效
     def __init__(self, config) -> None:
         self.playfield_width = config.PLAYFIELD_WIDTH
         self.playfield_height = config.PLAYFIELD_HEIGHT
@@ -107,31 +108,42 @@ class CollisionSystem:
         
         if np.any(map_bottom_boundary == 1):
             # 下边界
-            state.active = False
-            state.collision = True
-            state.collide_side = 'bottom'
-            pygame.event.post(pygame.event.Event(pygame.USEREVENT+1))
+            state.lock_delay_frames -= 1
+            state.is_blocked = True
+            if state.lock_delay_frames <= 0:
+                state.is_blocked = False
+                state.active = False
+                state.collision = True
+                state.collide_side = 'bottom'
+                pygame.event.post(pygame.event.Event(pygame.USEREVENT+1))
             return
         # 检测方块是否落在其他方块顶部
         if state.collide_side != 'bottom':
             for idx, arr in enumerate(np_shape):
                 if np.any(map_mat.map[position.y + idx + 1, position.x:position.x+shape.width].squeeze() & arr):
                     # 停止方块的运动
-                    state.active = False
-                    state.collision = True
-                    state.collide_side = 'bottom'
-                    pygame.event.post(pygame.event.Event(pygame.USEREVENT+1))
+                    state.lock_delay_frames -= 1
+                    state.is_blocked = True
+                    if state.lock_delay_frames <= 0:
+                        state.is_blocked = False
+                        state.active = False
+                        state.collision = True
+                        state.collide_side = 'bottom'
+                        pygame.event.post(pygame.event.Event(pygame.USEREVENT+1))
                     return
         # 检测方块是否碰到边界
         if np.any(map_left_boundary == 1):
             # 左边界
             state.collision = True
+            state.is_blocked = False
             state.collide_side = 'left'
         elif np.any(map_right_boundary == 1):
             # 右边界
             state.collision = True
+            state.is_blocked = False
             state.collide_side = 'right'
         else:
+            state.is_blocked = False
             state.collision = False
             state.collide_side = ''
         # 运动方块左/右边缘与静止方块右/左边缘发生碰撞
@@ -139,9 +151,11 @@ class CollisionSystem:
         for idx, arr in enumerate(np_shape.T):
             if state.collide_side != 'left' and np.any(map_mat.map[position.y:position.y+shape.height, position.x+idx-1].squeeze() & arr):
                 state.collision = True
+                state.is_blocked = False
                 state.collide_side = 'left'
             elif state.collide_side != 'right' and np.any(map_mat.map[position.y:position.y+shape.height, position.x+idx].squeeze() & arr):
                 state.collision = True
+                state.is_blocked = False
                 state.collide_side = 'right'
 
 # 消行和得分系统
@@ -284,7 +298,7 @@ class SpawnSystem:
         next_entity.add_component(SpeedComponent(0, drop_speed, self.config.HARD_DROP_SPEED))
         next_entity.add_component(ShapeComponent(next_shape))
         next_entity.add_component(ColorComponent())
-        next_entity.add_component(StateComponent())
+        next_entity.add_component(StateComponent(self.config.LOCK_DELAY_FRAMES))
 
 class RotationSystem:
     def process(self, entities):
