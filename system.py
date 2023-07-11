@@ -12,15 +12,16 @@ import random
 from component import PositionComponent, ShapeComponent, ColorComponent, SpeedComponent, StateComponent, MapComponent
 # 输入系统
 class InputSystem:
-    key_mapping = {
-        pygame.K_LEFT: 'left',
-        pygame.K_RIGHT: 'right',
-        pygame.K_DOWN: 'down',
-        pygame.K_UP: 'rotate',
-        pygame.K_SPACE: 'hard_drop',
-        pygame.K_p: 'pause',
-        pygame.K_RETURN: 'restart',
-    }
+    def __init__(self) -> None:
+        self.key_mapping = {
+            pygame.K_LEFT: 'left',
+            pygame.K_RIGHT: 'right',
+            pygame.K_DOWN: 'down',
+            pygame.K_UP: 'rotate',
+            pygame.K_SPACE: 'hard_drop',
+            pygame.K_p: 'pause',
+            pygame.K_RETURN: 'restart',
+        }
     def process(self, events, entities):
         entity = entities['block']
         map_entity = entities['map']
@@ -189,9 +190,9 @@ class RenderSystem:
         self.font = pygame.font.Font(None, 36)
         self.play_field = pygame.Surface((config.PLAYFIELD_WIDTH, config.PLAYFIELD_HEIGHT))
         self.score_board = pygame.Surface((config.SCOREBOARD_WIDTH, config.SCOREBOARD_HEIGHT))
-        self.game_over_text = self.font.render("You Died!", True, (255, 0, 0))
+        self.game_over_text = self.font.render("Y o u  D i e d !", True, (255, 0, 0))
         self.game_over_text_rect = self.game_over_text.get_rect(center=((self.play_field.get_width()*self.block_size) // 2, (self.play_field.get_height()*self.block_size) // 2))
-        self.pause_text = self.font.render("PAUSED", True, (255, 0, 0))
+        self.pause_text = self.font.render("P A U S E D", True, (255, 0, 0))
         self.pause_text_rect = self.game_over_text.get_rect(center=((self.play_field.get_width()*self.block_size) // 2, (self.play_field.get_height()*self.block_size) // 2))
 
     def process(self, entities):
